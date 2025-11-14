@@ -65,23 +65,44 @@ async def scrape_youtube_with_api(url: str, max_duration: int = 180) -> Dict:
             
             # Configura proxy se disponível
             if proxy_dict:
-                # Monkey patch para adicionar proxy ao youtube_transcript_api
+                # Monkey patch GLOBAL do requests para youtube_transcript_api usar
                 import requests
-                original_get = requests.get
+                import youtube_transcript_api._api
                 
+                # Salva original
+                original_get = requests.get
+                original_post = requests.post
+                
+                # Cria versões com proxy
                 def get_with_proxy(*args, **kwargs):
-                    kwargs['proxies'] = proxy_dict
-                    kwargs['timeout'] = 10
+                    if 'proxies' not in kwargs:
+                        kwargs['proxies'] = proxy_dict
+                    if 'timeout' not in kwargs:
+                        kwargs['timeout'] = 15
                     return original_get(*args, **kwargs)
                 
+                def post_with_proxy(*args, **kwargs):
+                    if 'proxies' not in kwargs:
+                        kwargs['proxies'] = proxy_dict
+                    if 'timeout' not in kwargs:
+                        kwargs['timeout'] = 15
+                    return original_post(*args, **kwargs)
+                
+                # Aplica monkey patch
                 requests.get = get_with_proxy
+                requests.post = post_with_proxy
+                youtube_transcript_api._api.requests.get = get_with_proxy
+                youtube_transcript_api._api.requests.post = post_with_proxy
             
             # Tenta pegar transcrição
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
             
-            # Restaura requests.get original
+            # Restaura requests original
             if proxy_dict:
                 requests.get = original_get
+                requests.post = original_post
+                youtube_transcript_api._api.requests.get = original_get
+                youtube_transcript_api._api.requests.post = original_post
             
             # Prioriza legendas manuais em português
             try:
@@ -149,10 +170,14 @@ async def scrape_youtube_with_api(url: str, max_duration: int = 180) -> Dict:
             last_error = f"Sem legendas ou bloqueado: {str(e)}"
             print(f"❌ Falhou: {last_error[:150]}")
             
-            # Restaura requests.get se necessário
+            # Restaura requests se necessário
             if proxy_dict and 'original_get' in locals():
                 import requests
+                import youtube_transcript_api._api
                 requests.get = original_get
+                requests.post = original_post
+                youtube_transcript_api._api.requests.get = original_get
+                youtube_transcript_api._api.requests.post = original_post
             
             # Continua para próximo proxy
             continue
@@ -161,10 +186,14 @@ async def scrape_youtube_with_api(url: str, max_duration: int = 180) -> Dict:
             last_error = str(e)
             print(f"❌ Falhou: {last_error[:100]}")
             
-            # Restaura requests.get se necessário
+            # Restaura requests se necessário
             if proxy_dict and 'original_get' in locals():
                 import requests
+                import youtube_transcript_api._api
                 requests.get = original_get
+                requests.post = original_post
+                youtube_transcript_api._api.requests.get = original_get
+                youtube_transcript_api._api.requests.post = original_post
             
             # Continua para próximo proxy
             continue
