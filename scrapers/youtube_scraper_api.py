@@ -36,11 +36,15 @@ async def scrape_youtube_with_api(url: str, max_duration: int = 180) -> Dict:
     # 1. Tenta com Apify Residential (melhor para YouTube)
     apify_residential = proxy_manager.get_apify_proxy("RESIDENTIAL")
     if apify_residential:
+        print("✅ Apify Residential proxy configurado")
         attempts.append(("Apify Residential", apify_residential))
+    else:
+        print("⚠️ Apify token não encontrado - configure APIFY_API_TOKEN no .env")
     
     # 2. Tenta com Apify Datacenter (mais barato)
     apify_datacenter = proxy_manager.get_apify_proxy("DATACENTER")
     if apify_datacenter:
+        print("✅ Apify Datacenter proxy configurado")
         attempts.append(("Apify Datacenter", apify_datacenter))
     
     # 3. Adiciona 3 proxies gratuitos
@@ -51,6 +55,8 @@ async def scrape_youtube_with_api(url: str, max_duration: int = 180) -> Dict:
     
     # 4. Tenta sem proxy (direto)
     attempts.append(("Direto (sem proxy)", None))
+    
+    print(f"📊 Total de {len(attempts)} tentativas configuradas")
     
     last_error = None
     

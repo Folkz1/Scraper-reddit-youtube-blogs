@@ -35,12 +35,20 @@ async def scrape_youtube(url: str, max_duration: int = 180) -> Dict:
     # Tenta API com proxies primeiro (melhor para VPS)
     if HAS_API_SCRAPER:
         try:
-            print("🎯 Tentando youtube-transcript-api com proxies rotativos...")
-            return await scrape_youtube_with_api(url, max_duration)
+            print("=" * 60)
+            print("🎯 Iniciando youtube-transcript-api com proxies")
+            print("=" * 60)
+            result = await scrape_youtube_with_api(url, max_duration)
+            print("=" * 60)
+            print("✅ youtube-transcript-api SUCESSO!")
+            print("=" * 60)
+            return result
         except Exception as api_error:
             # Se API falhar, tenta yt-dlp
-            print(f"⚠️ youtube-transcript-api falhou: {str(api_error)[:100]}")
+            print("=" * 60)
+            print(f"⚠️ youtube-transcript-api FALHOU: {str(api_error)[:200]}")
             print("🔄 Tentando yt-dlp como fallback...")
+            print("=" * 60)
     
     # Fallback: yt-dlp (pode ser bloqueado em VPS)
     try:
