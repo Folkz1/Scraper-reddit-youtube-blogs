@@ -48,3 +48,7 @@ test_reddit_response.json
 
 # Docker
 docker-compose.override.yml
+
+# YouTube Cookies (contém sessão sensível)
+cookies.txt
+*.cookies.txt

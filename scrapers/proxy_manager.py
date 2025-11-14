@@ -12,6 +12,11 @@ class ProxyManager:
         self.proxies = []
         self.last_fetch = 0
         self.fetch_interval = 300  # 5 minutos
+        
+        # Carrega variáveis de ambiente
+        from dotenv import load_dotenv
+        load_dotenv()
+        
         self.apify_token = os.getenv('APIFY_API_TOKEN')
         self.apify_proxy_password = os.getenv('APIFY_PROXY_PASSWORD')
         

@@ -72,10 +72,16 @@ async def scrape_youtube(url: str, max_duration: int = 180) -> Dict:
             print(f"⚠️ youtube-transcript-api FALHOU: {str(api_error)[:200]}")
             print("🔄 Tentando yt-dlp como último recurso...")
     
-    # Fallback: yt-dlp (pode ser bloqueado em VPS)
+    # Fallback: yt-dlp com proxy Apify
     try:
+        # Importa proxy manager
+        from .proxy_manager import proxy_manager
+        
         # Extrai ID do vídeo
         video_id = extract_video_id(url)
+        
+        # Tenta pegar proxy Apify
+        apify_proxy = proxy_manager.get_apify_proxy("RESIDENTIAL")
         
         # Configuração do yt-dlp com headers para parecer navegador real
         ydl_opts = {
@@ -101,6 +107,24 @@ async def scrape_youtube(url: str, max_duration: int = 180) -> Dict:
             'cookiefile': None,
             'nocheckcertificate': True,
         }
+        
+        # Adiciona proxy se disponível
+        if apify_proxy:
+            print(f"🌐 yt-dlp usando proxy Apify")
+            ydl_opts['proxy'] = apify_proxy['http']
+        else:
+            print(f"⚠️ yt-dlp sem proxy (pode ser bloqueado em VPS)")
+        
+        # Adiciona cookies se disponível (importante para VPS)
+        cookies_path = os.getenv('YOUTUBE_COOKIES_PATH', '/app/cookies.txt')
+        if os.path.exists(cookies_path):
+            print(f"🍪 Usando cookies do YouTube: {cookies_path}")
+            ydl_opts['cookiefile'] = cookies_path
+        elif os.path.exists('cookies.txt'):
+            print(f"🍪 Usando cookies do YouTube: cookies.txt")
+            ydl_opts['cookiefile'] = 'cookies.txt'
+        else:
+            print(f"⚠️ Cookies não encontrados (pode ser necessário em VPS)")
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # Extrai informações do vídeo
