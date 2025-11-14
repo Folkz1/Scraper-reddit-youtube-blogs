@@ -13,6 +13,7 @@ class ProxyManager:
         self.last_fetch = 0
         self.fetch_interval = 300  # 5 minutos
         self.apify_token = os.getenv('APIFY_API_TOKEN')
+        self.apify_proxy_password = os.getenv('APIFY_PROXY_PASSWORD')
         
     def fetch_free_proxies(self) -> List[str]:
         """Busca lista de proxies gratuitos"""
@@ -66,11 +67,17 @@ class ProxyManager:
         Retorna proxy do Apify (pago mas muito confiável)
         proxy_type: RESIDENTIAL (melhor) ou DATACENTER (mais barato)
         """
-        if not self.apify_token:
+        # Usa a senha do proxy (não o API token)
+        password = self.apify_proxy_password or self.apify_token
+        
+        if not password:
             return None
         
-        # Formato: http://groups-RESIDENTIAL:TOKEN@proxy.apify.com:8000
-        proxy_url = f"http://groups-{proxy_type}:{self.apify_token}@proxy.apify.com:8000"
+        # Formato correto: http://auto:PROXY_PASSWORD@proxy.apify.com:8000
+        # Ou com grupos: http://groups-RESIDENTIAL:PROXY_PASSWORD@proxy.apify.com:8000
+        username = f"groups-{proxy_type}"
+        
+        proxy_url = f"http://{username}:{password}@proxy.apify.com:8000"
         
         return {
             'http': proxy_url,
