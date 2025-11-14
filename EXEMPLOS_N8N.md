@@ -20,7 +20,7 @@ Configuração básica para scraping:
 ```
 
 ### 2. Body do Request
-
+321312
 ```json
 {
   "url": "={{ $json.article_url }}",
