@@ -9,8 +9,12 @@ async def scrape_article(url: str) -> Dict:
     Fallback para BeautifulSoup se necessário
     """
     try:
-        # Download do HTML
-        downloaded = trafilatura.fetch_url(url)
+        # Valida URL
+        if not url.startswith(('http://', 'https://')):
+            raise ValueError("URL inválida: deve começar com http:// ou https://")
+        
+        # Download do HTML com timeout
+        downloaded = trafilatura.fetch_url(url, timeout=15)
         
         if not downloaded:
             raise Exception("Não foi possível baixar a página")
@@ -42,7 +46,11 @@ async def scrape_article(url: str) -> Dict:
     except Exception as e:
         # Fallback: BeautifulSoup
         try:
-            response = requests.get(url, timeout=10)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+            response = requests.get(url, timeout=15, headers=headers)
+            response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
             
             # Remove scripts e styles

@@ -282,7 +282,7 @@ Quando `type: "auto"`, a API detecta automaticamente:
 
 | URL contém | Tipo detectado |
 |------------|----------------|
-| `youtube.com/watch` ou `youtu.be/` | `youtube` |
+| `youtube.com/watch`, `youtu.be/` ou `youtube.com/shorts/` | `youtube` |
 | `reddit.com/r/` + `/comments/` | `reddit` |
 | Qualquer outra | `article` |
 

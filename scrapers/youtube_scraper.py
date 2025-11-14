@@ -34,6 +34,8 @@ async def scrape_youtube(url: str, max_duration: int = 180) -> Dict:
             'subtitleslangs': ['pt', 'pt-BR', 'en'],
             'quiet': True,
             'no_warnings': True,
+            'socket_timeout': 30,
+            'extractor_retries': 3,
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -82,7 +84,8 @@ async def scrape_youtube(url: str, max_duration: int = 180) -> Dict:
             
             # Baixa as legendas
             import requests
-            response = requests.get(subtitle_url)
+            response = requests.get(subtitle_url, timeout=15)
+            response.raise_for_status()
             subtitle_json = response.json()
             
             # Processa legendas (formato JSON3 do YouTube)

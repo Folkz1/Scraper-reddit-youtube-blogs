@@ -54,7 +54,7 @@ def detect_url_type(url: str) -> str:
     """Detecta automaticamente o tipo de URL"""
     url_lower = url.lower()
     
-    if "youtube.com/watch" in url_lower or "youtu.be/" in url_lower:
+    if "youtube.com/watch" in url_lower or "youtu.be/" in url_lower or "youtube.com/shorts/" in url_lower:
         return "youtube"
     elif "reddit.com/r/" in url_lower and "/comments/" in url_lower:
         return "reddit"
