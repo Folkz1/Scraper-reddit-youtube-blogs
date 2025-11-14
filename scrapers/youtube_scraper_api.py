@@ -26,27 +26,37 @@ def extract_video_id(url: str) -> str:
 
 async def scrape_youtube_with_api(url: str, max_duration: int = 180) -> Dict:
     """
-    Scrape usando YouTube Transcript API com proxies rotativos
+    Scrape usando YouTube Transcript API com proxies
+    Prioridade: Apify Residential > Apify Datacenter > Proxies Gratuitos > Direto
     """
     video_id = extract_video_id(url)
     
-    # Tenta sem proxy primeiro
-    attempts = [None]
+    attempts = []
     
-    # Adiciona 5 proxies aleatórios para tentar
-    for _ in range(5):
+    # 1. Tenta com Apify Residential (melhor para YouTube)
+    apify_residential = proxy_manager.get_apify_proxy("RESIDENTIAL")
+    if apify_residential:
+        attempts.append(("Apify Residential", apify_residential))
+    
+    # 2. Tenta com Apify Datacenter (mais barato)
+    apify_datacenter = proxy_manager.get_apify_proxy("DATACENTER")
+    if apify_datacenter:
+        attempts.append(("Apify Datacenter", apify_datacenter))
+    
+    # 3. Adiciona 3 proxies gratuitos
+    for _ in range(3):
         proxy = proxy_manager.get_random_proxy()
         if proxy:
-            attempts.append(proxy)
+            attempts.append(("Proxy Gratuito", proxy))
+    
+    # 4. Tenta sem proxy (direto)
+    attempts.append(("Direto (sem proxy)", None))
     
     last_error = None
     
-    for attempt_num, proxy_dict in enumerate(attempts):
+    for attempt_num, (proxy_name, proxy_dict) in enumerate(attempts):
         try:
-            if proxy_dict:
-                print(f"🔄 Tentativa {attempt_num + 1} com proxy: {proxy_dict['http'][:30]}...")
-            else:
-                print(f"🔄 Tentativa {attempt_num + 1} sem proxy (direto)...")
+            print(f"🔄 Tentativa {attempt_num + 1}/{len(attempts)}: {proxy_name}")
             
             # Configura proxy se disponível
             if proxy_dict:
@@ -111,8 +121,7 @@ async def scrape_youtube_with_api(url: str, max_duration: int = 180) -> Dict:
             
             full_text = ' '.join(transcript_text)
             
-            proxy_used = proxy_dict['http'][:50] if proxy_dict else "direto"
-            print(f"✅ Sucesso com: {proxy_used}")
+            print(f"✅ Sucesso com: {proxy_name}")
             
             # Busca metadados básicos
             return {
