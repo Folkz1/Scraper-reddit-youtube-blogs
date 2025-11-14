@@ -12,6 +12,7 @@ load_dotenv()
 from scrapers.web_scraper import scrape_article
 from scrapers.youtube_scraper import scrape_youtube
 from scrapers.reddit_scraper import scrape_reddit
+from scrapers.celebrity_scraper import scrape_celebrity_image
 
 app = FastAPI(
     title="Scraper API",
@@ -34,9 +35,18 @@ class ScrapeRequest(BaseModel):
     max_comments: Optional[int] = 10
     sort_comments: Optional[Literal["top", "best", "new", "controversial"]] = "top"
 
+class CelebrityImageRequest(BaseModel):
+    celebrity_name: str
+    num_results: Optional[int] = 5
+
 class ScrapeResponse(BaseModel):
     success: bool
     type: str
+    data: dict
+    error: Optional[str] = None
+
+class CelebrityImageResponse(BaseModel):
+    success: bool
     data: dict
     error: Optional[str] = None
 
@@ -96,6 +106,35 @@ async def scrape(request: ScrapeRequest):
         return ScrapeResponse(
             success=False,
             type=scrape_type if 'scrape_type' in locals() else "unknown",
+            data={},
+            error=str(e)
+        )
+
+@app.post("/celebrity-image", response_model=CelebrityImageResponse)
+async def get_celebrity_image(request: CelebrityImageRequest):
+    """
+    Busca, analisa com IA e processa imagem de celebridade
+    
+    - Busca imagens no Google Custom Search
+    - IA (Gemini) escolhe a melhor imagem
+    - Faz crop para 1:1 (Instagram)
+    - Retorna base64 pronto para usar
+    """
+    try:
+        data = await scrape_celebrity_image(
+            request.celebrity_name,
+            request.num_results
+        )
+        
+        return CelebrityImageResponse(
+            success=True,
+            data=data,
+            error=None
+        )
+    
+    except Exception as e:
+        return CelebrityImageResponse(
+            success=False,
             data={},
             error=str(e)
         )
