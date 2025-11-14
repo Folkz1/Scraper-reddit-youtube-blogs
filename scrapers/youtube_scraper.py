@@ -3,7 +3,15 @@ import re
 from typing import Dict
 import os
 
-# Importa scraper alternativo
+# Importa scrapers alternativos
+try:
+    from .youtube_scraper_direct import scrape_youtube_direct
+    HAS_DIRECT_SCRAPER = True
+    print("✅ youtube_scraper_direct importado com sucesso")
+except Exception as e:
+    HAS_DIRECT_SCRAPER = False
+    print(f"⚠️ youtube_scraper_direct não disponível: {e}")
+
 try:
     from .youtube_scraper_api import scrape_youtube_with_api
     HAS_API_SCRAPER = True
@@ -37,23 +45,32 @@ async def scrape_youtube(url: str, max_duration: int = 180) -> Dict:
     max_duration: duração máxima em segundos (padrão: 180 = 3 minutos)
     """
     
-    # Tenta API com proxies primeiro (melhor para VPS)
-    if HAS_API_SCRAPER:
+    # Tenta scraper direto primeiro (mais confiável com proxies)
+    if HAS_DIRECT_SCRAPER:
         try:
             print("=" * 60)
-            print("🎯 Iniciando youtube-transcript-api com proxies")
+            print("🎯 Tentando scraper direto com Apify Proxy")
             print("=" * 60)
-            result = await scrape_youtube_with_api(url, max_duration)
+            result = await scrape_youtube_direct(url, max_duration)
             print("=" * 60)
-            print("✅ youtube-transcript-api SUCESSO!")
+            print("✅ Scraper direto SUCESSO!")
             print("=" * 60)
             return result
+        except Exception as direct_error:
+            print("=" * 60)
+            print(f"⚠️ Scraper direto FALHOU: {str(direct_error)[:200]}")
+            print("=" * 60)
+    
+    # Fallback: youtube-transcript-api
+    if HAS_API_SCRAPER:
+        try:
+            print("🔄 Tentando youtube-transcript-api...")
+            result = await scrape_youtube_with_api(url, max_duration)
+            print("✅ youtube-transcript-api SUCESSO!")
+            return result
         except Exception as api_error:
-            # Se API falhar, tenta yt-dlp
-            print("=" * 60)
             print(f"⚠️ youtube-transcript-api FALHOU: {str(api_error)[:200]}")
-            print("🔄 Tentando yt-dlp como fallback...")
-            print("=" * 60)
+            print("🔄 Tentando yt-dlp como último recurso...")
     
     # Fallback: yt-dlp (pode ser bloqueado em VPS)
     try:
