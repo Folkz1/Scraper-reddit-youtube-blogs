@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  scraper-api:
+    build: .
+    container_name: scraper-api
+    ports:
+      - "8001:8001"
+    environment:
+      # Reddit API (opcional)
+      - REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID:-}
+      - REDDIT_CLIENT_SECRET=${REDDIT_CLIENT_SECRET:-}
+      - REDDIT_USER_AGENT=${REDDIT_USER_AGENT:-ScraperBot/1.0}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
