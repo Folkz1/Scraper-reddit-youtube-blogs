@@ -35,7 +35,23 @@ curl -X POST http://localhost:8001/scrape \
   -d '{"url": "https://exemplo.com/artigo"}'
 ```
 
-## 📦 Instalação Local
+## 🚀 Quick Start
+
+### Opção 1: Docker (Recomendado)
+
+```bash
+# Clone o repositório
+git clone https://github.com/Folkz1/Scraper-reddit-youtube-blogs.git
+cd Scraper-reddit-youtube-blogs
+
+# Rode com Docker Compose
+docker-compose up -d
+
+# Acesse a documentação
+open http://localhost:8001/docs
+```
+
+### Opção 2: Local
 
 ```bash
 # Instalar dependências
@@ -43,9 +59,30 @@ pip install -r requirements.txt
 
 # Rodar servidor
 python app.py
+
+# Acesse: http://localhost:8001
 ```
 
-Acesse: http://localhost:8001
+## 📸 Screenshots
+
+### Swagger UI (Documentação Interativa)
+Acesse `http://localhost:8001/docs` para testar a API diretamente no navegador.
+
+### Exemplo de Resposta
+
+```json
+{
+  "success": true,
+  "type": "article",
+  "data": {
+    "title": "Monster enters the female-focused energy game with FLRT",
+    "content": "Monster Beverage is joining the female-focused energy drink movement...",
+    "word_count": 144,
+    "author": "John Doe",
+    "language": "en"
+  }
+}
+```
 
 ## 🐳 Docker
 
@@ -204,6 +241,48 @@ pip install -r requirements.txt
 nohup python app.py &
 ```
 
-## 📚 Documentação API
+## 📚 Documentação
 
-Acesse: http://localhost:8001/docs (Swagger UI automático)
+- **[COMECE_AQUI.md](COMECE_AQUI.md)** - Guia rápido de início
+- **[DEPLOY_VPS.md](DEPLOY_VPS.md)** - Deploy completo na VPS
+- **[EXEMPLOS_N8N.md](EXEMPLOS_N8N.md)** - Integração com n8n
+- **Swagger UI** - http://localhost:8001/docs (documentação interativa)
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Sinta-se à vontade para:
+
+1. Fazer fork do projeto
+2. Criar uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abrir um Pull Request
+
+## 📝 Roadmap
+
+- [ ] Suporte a Twitter/X
+- [ ] Suporte a LinkedIn
+- [ ] Cache de resultados (Redis)
+- [ ] Rate limiting
+- [ ] Webhook para processar em background
+- [ ] Suporte a PDFs
+- [ ] API de batch processing
+
+## ⭐ Star History
+
+Se este projeto te ajudou, considere dar uma ⭐!
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🙏 Agradecimentos
+
+- [trafilatura](https://github.com/adbar/trafilatura) - Extração de artigos
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - Download de legendas do YouTube
+- [praw](https://github.com/praw-dev/praw) - Reddit API
+- [FastAPI](https://fastapi.tiangolo.com/) - Framework web
+
+---
+
+**Feito com ❤️ para a comunidade de automação**
