@@ -5,26 +5,24 @@ from datetime import datetime
 
 # Configuração do Reddit (pode usar sem autenticação para testes)
 def get_reddit_client():
-    """Cria cliente Reddit (funciona sem credenciais para leitura básica)"""
+    """Cria cliente Reddit (requer credenciais)"""
     try:
-        # Tenta usar credenciais se disponíveis
-        client_id = os.getenv('REDDIT_CLIENT_ID', '')
-        client_secret = os.getenv('REDDIT_CLIENT_SECRET', '')
+        client_id = os.getenv('REDDIT_CLIENT_ID')
+        client_secret = os.getenv('REDDIT_CLIENT_SECRET')
         user_agent = os.getenv('REDDIT_USER_AGENT', 'ScraperBot/1.0')
         
-        if client_id and client_secret:
-            return praw.Reddit(
-                client_id=client_id,
-                client_secret=client_secret,
-                user_agent=user_agent
+        if not client_id or not client_secret:
+            raise Exception(
+                "Credenciais do Reddit não configuradas. "
+                "Configure REDDIT_CLIENT_ID e REDDIT_CLIENT_SECRET no arquivo .env"
             )
-        else:
-            # Modo somente leitura (sem autenticação)
-            return praw.Reddit(
-                client_id='',
-                client_secret='',
-                user_agent=user_agent
-            )
+        
+        return praw.Reddit(
+            client_id=client_id,
+            client_secret=client_secret,
+            user_agent=user_agent,
+            check_for_async=False
+        )
     except Exception as e:
         raise Exception(f"Erro ao criar cliente Reddit: {str(e)}")
 

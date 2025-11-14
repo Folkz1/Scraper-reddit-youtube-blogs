@@ -6,17 +6,23 @@ from typing import Dict, List, Optional
 import os
 
 # Google Custom Search API
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY', 'AIzaSyD_Uj6AzQhHvrjyZiG1VTHxGS4M6Dy2efY')
-GOOGLE_SEARCH_ENGINE_ID = os.getenv('GOOGLE_SEARCH_ENGINE_ID', '')  # Você precisa criar um
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+GOOGLE_SEARCH_ENGINE_ID = os.getenv('GOOGLE_SEARCH_ENGINE_ID')
 
 # OpenRouter API
-OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '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')
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 
 def search_celebrity_images(celebrity_name: str, num_results: int = 5) -> List[Dict]:
     """
     Busca imagens de uma celebridade usando Google Custom Search API
     """
     try:
+        if not GOOGLE_API_KEY or not GOOGLE_SEARCH_ENGINE_ID:
+            raise Exception(
+                "Google API não configurada. "
+                "Configure GOOGLE_API_KEY e GOOGLE_SEARCH_ENGINE_ID no arquivo .env"
+            )
+        
         url = "https://www.googleapis.com/customsearch/v1"
         params = {
             "key": GOOGLE_API_KEY,
@@ -29,7 +35,7 @@ def search_celebrity_images(celebrity_name: str, num_results: int = 5) -> List[D
             "safe": "active"
         }
         
-        response = requests.get(url, params=params, timeout=10)
+        response = requests.get(url, params=params, timeout=15)
         response.raise_for_status()
         
         data = response.json()
@@ -92,10 +98,16 @@ Retorne APENAS um JSON válido (sem markdown, sem ```json):
   "issues": ["pequeno watermark no canto"]
 }}"""
 
+        if not OPENROUTER_API_KEY:
+            raise Exception(
+                "OpenRouter API não configurada. "
+                "Configure OPENROUTER_API_KEY no arquivo .env"
+            )
+        
         # Monta o payload para OpenRouter
         # Usando modelo lite (mais barato)
         payload = {
-            "model": "google/gemini-2.5-flash-lite",
+            "model": "google/gemini-2.0-flash-exp:free",
             "messages": [
                 {
                     "role": "user",
@@ -127,14 +139,14 @@ Retorne APENAS um JSON válido (sem markdown, sem ```json):
         }
         
         print(f"📡 [DEBUG] Enviando request para OpenRouter...")
-        print(f"   Modelo: google/gemini-2.0-flash-exp:free")
-        print(f"   Timeout: 30s")
+        print(f"   Modelo: {payload['model']}")
+        print(f"   Timeout: 45s")
         
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             json=payload,
             headers=headers,
-            timeout=30
+            timeout=45
         )
         
         print(f"✅ [DEBUG] Response status: {response.status_code}")
