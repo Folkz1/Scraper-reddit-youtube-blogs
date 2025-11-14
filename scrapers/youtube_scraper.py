@@ -1,6 +1,14 @@
 import yt_dlp
 import re
 from typing import Dict
+import os
+
+# Importa scraper alternativo
+try:
+    from .youtube_scraper_api import scrape_youtube_with_api
+    HAS_API_SCRAPER = True
+except ImportError:
+    HAS_API_SCRAPER = False
 
 def extract_video_id(url: str) -> str:
     """Extrai o ID do vídeo de uma URL do YouTube"""
@@ -19,14 +27,27 @@ def extract_video_id(url: str) -> str:
 
 async def scrape_youtube(url: str, max_duration: int = 180) -> Dict:
     """
-    Scrape de transcrição do YouTube usando yt-dlp
+    Scrape de transcrição do YouTube
+    Tenta API primeiro (mais confiável em VPS), fallback para yt-dlp
     max_duration: duração máxima em segundos (padrão: 180 = 3 minutos)
     """
+    
+    # Tenta API com proxies primeiro (melhor para VPS)
+    if HAS_API_SCRAPER:
+        try:
+            print("🎯 Tentando youtube-transcript-api com proxies rotativos...")
+            return await scrape_youtube_with_api(url, max_duration)
+        except Exception as api_error:
+            # Se API falhar, tenta yt-dlp
+            print(f"⚠️ youtube-transcript-api falhou: {str(api_error)[:100]}")
+            print("🔄 Tentando yt-dlp como fallback...")
+    
+    # Fallback: yt-dlp (pode ser bloqueado em VPS)
     try:
         # Extrai ID do vídeo
         video_id = extract_video_id(url)
         
-        # Configuração do yt-dlp
+        # Configuração do yt-dlp com headers para parecer navegador real
         ydl_opts = {
             'skip_download': True,
             'writesubtitles': True,
@@ -36,6 +57,19 @@ async def scrape_youtube(url: str, max_duration: int = 180) -> Dict:
             'no_warnings': True,
             'socket_timeout': 30,
             'extractor_retries': 3,
+            # Headers para parecer navegador real
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Accept-Encoding': 'gzip, deflate',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            },
+            # Cookies (opcional - pode ajudar)
+            'cookiefile': None,
+            'nocheckcertificate': True,
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
