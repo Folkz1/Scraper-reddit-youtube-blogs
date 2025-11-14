@@ -145,8 +145,17 @@ async def scrape_youtube_with_api(url: str, max_duration: int = 180) -> Dict:
             }
             
         except (TranscriptsDisabled, NoTranscriptFound) as e:
-            # Erros que não adianta tentar com outro proxy
-            raise Exception(f"Este vídeo não possui legendas disponíveis: {str(e)}")
+            # Pode ser bloqueio do YouTube, tenta com outro proxy
+            last_error = f"Sem legendas ou bloqueado: {str(e)}"
+            print(f"❌ Falhou: {last_error[:150]}")
+            
+            # Restaura requests.get se necessário
+            if proxy_dict and 'original_get' in locals():
+                import requests
+                requests.get = original_get
+            
+            # Continua para próximo proxy
+            continue
         
         except Exception as e:
             last_error = str(e)
@@ -161,4 +170,7 @@ async def scrape_youtube_with_api(url: str, max_duration: int = 180) -> Dict:
             continue
     
     # Se chegou aqui, todas as tentativas falharam
-    raise Exception(f"Todas as tentativas falharam. Último erro: {last_error}")
+    if "Sem legendas" in last_error or "NoTranscriptFound" in last_error:
+        raise Exception(f"Este vídeo não possui legendas/transcrições disponíveis após {len(attempts)} tentativas")
+    else:
+        raise Exception(f"Todas as {len(attempts)} tentativas falharam. Último erro: {last_error}")
