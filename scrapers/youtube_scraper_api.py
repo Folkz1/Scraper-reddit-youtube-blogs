@@ -184,7 +184,11 @@ async def scrape_youtube_with_api(url: str, max_duration: int = 180) -> Dict:
         
         except Exception as e:
             last_error = str(e)
-            print(f"❌ Falhou: {last_error[:100]}")
+            print(f"❌ Falhou: {last_error[:200]}")
+            
+            # Debug: mostra tipo de erro
+            if "no element found" in last_error or "XML" in last_error:
+                print(f"   ⚠️ Erro de parsing - proxy pode estar retornando HTML de erro")
             
             # Restaura requests se necessário
             if proxy_dict and 'original_get' in locals():
