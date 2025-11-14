@@ -7,8 +7,13 @@ import os
 try:
     from .youtube_scraper_api import scrape_youtube_with_api
     HAS_API_SCRAPER = True
-except ImportError:
+    print("✅ youtube_scraper_api importado com sucesso")
+except ImportError as e:
     HAS_API_SCRAPER = False
+    print(f"⚠️ Não foi possível importar youtube_scraper_api: {e}")
+except Exception as e:
+    HAS_API_SCRAPER = False
+    print(f"❌ Erro ao importar youtube_scraper_api: {e}")
 
 def extract_video_id(url: str) -> str:
     """Extrai o ID do vídeo de uma URL do YouTube"""

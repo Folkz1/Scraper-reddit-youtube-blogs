@@ -3,7 +3,6 @@ Scraper alternativo usando YouTube Transcript API com suporte a proxies
 """
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
-from youtube_transcript_api._api import _TranscriptApi
 import re
 from typing import Dict
 import os
