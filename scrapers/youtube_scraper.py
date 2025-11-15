@@ -7,21 +7,14 @@ import os
 try:
     from .youtube_scraper_direct import scrape_youtube_direct
     HAS_DIRECT_SCRAPER = True
-    print("✅ youtube_scraper_direct importado com sucesso")
 except Exception as e:
     HAS_DIRECT_SCRAPER = False
-    print(f"⚠️ youtube_scraper_direct não disponível: {e}")
 
 try:
     from .youtube_scraper_api import scrape_youtube_with_api
     HAS_API_SCRAPER = True
-    print("✅ youtube_scraper_api importado com sucesso")
-except ImportError as e:
-    HAS_API_SCRAPER = False
-    print(f"⚠️ Não foi possível importar youtube_scraper_api: {e}")
 except Exception as e:
     HAS_API_SCRAPER = False
-    print(f"❌ Erro ao importar youtube_scraper_api: {e}")
 
 def extract_video_id(url: str) -> str:
     """Extrai o ID do vídeo de uma URL do YouTube"""
@@ -48,29 +41,18 @@ async def scrape_youtube(url: str, max_duration: int = 180) -> Dict:
     # Tenta scraper direto primeiro (mais confiável com proxies)
     if HAS_DIRECT_SCRAPER:
         try:
-            print("=" * 60)
-            print("🎯 Tentando scraper direto com Apify Proxy")
-            print("=" * 60)
             result = await scrape_youtube_direct(url, max_duration)
-            print("=" * 60)
-            print("✅ Scraper direto SUCESSO!")
-            print("=" * 60)
             return result
         except Exception as direct_error:
-            print("=" * 60)
-            print(f"⚠️ Scraper direto FALHOU: {str(direct_error)[:200]}")
-            print("=" * 60)
+            pass  # Tenta próximo método
     
     # Fallback: youtube-transcript-api
     if HAS_API_SCRAPER:
         try:
-            print("🔄 Tentando youtube-transcript-api...")
             result = await scrape_youtube_with_api(url, max_duration)
-            print("✅ youtube-transcript-api SUCESSO!")
             return result
         except Exception as api_error:
-            print(f"⚠️ youtube-transcript-api FALHOU: {str(api_error)[:200]}")
-            print("🔄 Tentando yt-dlp como último recurso...")
+            pass  # Tenta próximo método
     
     # Fallback: yt-dlp com proxy Apify
     try:
@@ -110,21 +92,14 @@ async def scrape_youtube(url: str, max_duration: int = 180) -> Dict:
         
         # Adiciona proxy se disponível
         if apify_proxy:
-            print(f"🌐 yt-dlp usando proxy Apify")
             ydl_opts['proxy'] = apify_proxy['http']
-        else:
-            print(f"⚠️ yt-dlp sem proxy (pode ser bloqueado em VPS)")
         
         # Adiciona cookies se disponível (importante para VPS)
         cookies_path = os.getenv('YOUTUBE_COOKIES_PATH', '/app/cookies.txt')
         if os.path.exists(cookies_path):
-            print(f"🍪 Usando cookies do YouTube: {cookies_path}")
             ydl_opts['cookiefile'] = cookies_path
         elif os.path.exists('cookies.txt'):
-            print(f"🍪 Usando cookies do YouTube: cookies.txt")
             ydl_opts['cookiefile'] = 'cookies.txt'
-        else:
-            print(f"⚠️ Cookies não encontrados (pode ser necessário em VPS)")
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # Extrai informações do vídeo
