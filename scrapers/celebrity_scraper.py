@@ -60,16 +60,11 @@ def search_celebrity_images(celebrity_name: str, num_results: int = 5) -> List[D
 
 def choose_best_image_with_ai(celebrity_name: str, images: List[Dict]) -> Dict:
     """
-    Usa Gemini 2.5 Flash via OpenRouter para escolher a melhor imagem
+    Usa Gemini 2.0 Flash via OpenRouter para escolher a melhor imagem
     """
     try:
-        print(f"\n🤖 [DEBUG] Iniciando análise com IA para: {celebrity_name}")
-        
         # Prepara as URLs das imagens
         image_urls = [img["url"] for img in images[:5]]  # Máximo 5 imagens
-        print(f"🖼️  [DEBUG] Analisando {len(image_urls)} imagens:")
-        for i, url in enumerate(image_urls):
-            print(f"   {i+1}. {url[:80]}...")
         
         # Prompt para o Gemini
         prompt = f"""Analise estas {len(image_urls)} imagens de {celebrity_name}.
@@ -105,9 +100,9 @@ Retorne APENAS um JSON válido (sem markdown, sem ```json):
             )
         
         # Monta o payload para OpenRouter
-        # Usando modelo lite (mais barato)
+        # Usando modelo pago (mais confiável)
         payload = {
-            "model": "google/gemini-2.0-flash-exp:free",
+            "model": "google/gemini-2.0-flash-exp",
             "messages": [
                 {
                     "role": "user",
@@ -138,10 +133,6 @@ Retorne APENAS um JSON válido (sem markdown, sem ```json):
             "X-Title": "Celebrity Image Scraper"
         }
         
-        print(f"📡 [DEBUG] Enviando request para OpenRouter...")
-        print(f"   Modelo: {payload['model']}")
-        print(f"   Timeout: 45s")
-        
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
             json=payload,
@@ -149,39 +140,22 @@ Retorne APENAS um JSON válido (sem markdown, sem ```json):
             timeout=45
         )
         
-        print(f"✅ [DEBUG] Response status: {response.status_code}")
-        
-        if response.status_code != 200:
-            print(f"❌ [DEBUG] Erro HTTP {response.status_code}")
-            print(f"   Response body: {response.text[:500]}")
-        
         response.raise_for_status()
         
         result = response.json()
-        print(f"📦 [DEBUG] Response recebido:")
-        print(f"   Keys: {list(result.keys())}")
         
         if "error" in result:
-            print(f"❌ [DEBUG] Erro na API: {result['error']}")
             raise Exception(f"OpenRouter error: {result['error']}")
         
         content = result["choices"][0]["message"]["content"]
-        print(f"💬 [DEBUG] Conteúdo da resposta (primeiros 200 chars):")
-        print(f"   {content[:200]}...")
         
         # Parse do JSON
         import json
         analysis = json.loads(content)
-        print(f"✅ [DEBUG] JSON parseado com sucesso!")
-        print(f"   best_index: {analysis.get('best_index')}")
-        print(f"   confidence: {analysis.get('confidence')}")
-        print(f"   reason: {analysis.get('reason', '')[:80]}...")
         
         # Pega a imagem escolhida
         best_index = analysis.get("best_index", 0)
         best_image = images[best_index]
-        
-        print(f"🎯 [DEBUG] Imagem escolhida: #{best_index + 1}")
         
         return {
             "url": best_image["url"],
@@ -194,8 +168,6 @@ Retorne APENAS um JSON válido (sem markdown, sem ```json):
         }
     
     except Exception as e:
-        print(f"❌ [DEBUG] Erro na análise com IA: {str(e)}")
-        print(f"   Tipo do erro: {type(e).__name__}")
         # Fallback: escolhe a primeira imagem com boa resolução
         for i, img in enumerate(images):
             if img.get("width", 0) >= 800 and img.get("height", 0) >= 800:
