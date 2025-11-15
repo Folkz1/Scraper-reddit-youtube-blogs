@@ -10,9 +10,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from scrapers.web_scraper import scrape_article
-from scrapers.youtube_scraper import scrape_youtube
+from scrapers.youtube_scraper import scrape_youtube, extract_video_id
 from scrapers.reddit_scraper import scrape_reddit
 from scrapers.celebrity_scraper import scrape_celebrity_image
+from scrapers.youtube_data_api import get_video_metadata, get_channel_info
 
 app = FastAPI(
     title="Scraper API",
@@ -50,6 +51,14 @@ class CelebrityImageResponse(BaseModel):
     data: dict
     error: Optional[str] = None
 
+class YouTubeMetadataRequest(BaseModel):
+    url: str
+
+class YouTubeMetadataResponse(BaseModel):
+    success: bool
+    data: dict
+    error: Optional[str] = None
+
 def detect_url_type(url: str) -> str:
     """Detecta automaticamente o tipo de URL"""
     url_lower = url.lower()
@@ -68,6 +77,8 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "/scrape": "POST - Scrape de URLs (artigos, YouTube, Reddit)",
+            "/youtube/metadata": "POST - Metadados de vídeos do YouTube (views, likes, etc)",
+            "/celebrity-image": "POST - Busca e processa imagem de celebridade",
             "/health": "GET - Health check"
         }
     }
@@ -106,6 +117,59 @@ async def scrape(request: ScrapeRequest):
         return ScrapeResponse(
             success=False,
             type=scrape_type if 'scrape_type' in locals() else "unknown",
+            data={},
+            error=str(e)
+        )
+
+@app.post("/youtube/metadata", response_model=YouTubeMetadataResponse)
+async def get_youtube_metadata(request: YouTubeMetadataRequest):
+    """
+    Busca metadados públicos de um vídeo do YouTube
+    
+    Retorna:
+    - Views, likes, comentários
+    - Título, descrição, tags
+    - Data de publicação
+    - Informações do canal
+    - Thumbnail de alta qualidade
+    - Duração do vídeo
+    
+    Requer: YOUTUBE_API_KEY configurada no .env
+    """
+    try:
+        # Extrai video_id da URL
+        video_id = extract_video_id(request.url)
+        
+        # Busca metadados
+        metadata = get_video_metadata(video_id)
+        
+        if not metadata:
+            raise Exception("Não foi possível obter metadados. Verifique se YOUTUBE_API_KEY está configurada.")
+        
+        # Busca informações do canal (opcional)
+        channel_info = None
+        if metadata.get('channel_id'):
+            channel_info = get_channel_info(metadata['channel_id'])
+        
+        # Monta resposta
+        response_data = {
+            "video_id": video_id,
+            "url": request.url,
+            **metadata
+        }
+        
+        if channel_info:
+            response_data['channel_info'] = channel_info
+        
+        return YouTubeMetadataResponse(
+            success=True,
+            data=response_data,
+            error=None
+        )
+    
+    except Exception as e:
+        return YouTubeMetadataResponse(
+            success=False,
             data={},
             error=str(e)
         )
