@@ -200,11 +200,24 @@ def crop_image_to_square(image_url: str, target_size: int = 1080) -> str:
     Baixa imagem, faz crop centralizado para 1:1 e retorna base64
     """
     try:
-        # Download da imagem
-        response = requests.get(image_url, timeout=15, headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        })
+        # Download da imagem com headers mais completos
+        response = requests.get(
+            image_url, 
+            timeout=15, 
+            headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Referer': 'https://www.google.com/'
+            },
+            allow_redirects=True
+        )
         response.raise_for_status()
+        
+        # Verifica se é realmente uma imagem
+        content_type = response.headers.get('content-type', '')
+        if not content_type.startswith('image/'):
+            raise Exception(f"URL não retornou uma imagem (content-type: {content_type})")
         
         # Abre imagem
         img = Image.open(BytesIO(response.content))
@@ -262,8 +275,36 @@ async def scrape_celebrity_image(
         # 2. IA escolhe a melhor
         best_image = choose_best_image_with_ai(celebrity_name, images)
         
-        # 3. Crop para 1:1
-        image_1x1_base64 = crop_image_to_square(best_image["url"])
+        # 3. Crop para 1:1 (com fallback se falhar)
+        image_1x1_base64 = None
+        last_error = None
+        
+        # Tenta a imagem escolhida pela IA
+        try:
+            image_1x1_base64 = crop_image_to_square(best_image["url"])
+        except Exception as e:
+            last_error = str(e)
+            # Fallback: tenta outras imagens em ordem
+            for i, img in enumerate(images):
+                if i == best_image["index"]:
+                    continue  # Já tentamos esta
+                try:
+                    image_1x1_base64 = crop_image_to_square(img["url"])
+                    best_image = {
+                        "url": img["url"],
+                        "index": i,
+                        "reason": f"Fallback: Imagem original falhou ({last_error[:50]})",
+                        "confidence": 0.6,
+                        "issues": [f"Imagem da IA não processável: {last_error}"],
+                        "original_width": img.get("width", 0),
+                        "original_height": img.get("height", 0)
+                    }
+                    break
+                except:
+                    continue
+        
+        if not image_1x1_base64:
+            raise Exception(f"Nenhuma imagem pôde ser processada. Último erro: {last_error}")
         
         return {
             "celebrity": celebrity_name,
