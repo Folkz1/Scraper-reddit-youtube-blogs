@@ -31,7 +31,7 @@ def search_celebrity_images(celebrity_name: str, num_results: int = 5) -> List[D
             "searchType": "image",
             "imgSize": "large",
             "imgType": "photo",
-            "num": num_results,
+            "num": min(num_results * 2, 10),  # Busca mais para compensar filtros (máx 10)
             "safe": "active"
         }
         
@@ -43,15 +43,40 @@ def search_celebrity_images(celebrity_name: str, num_results: int = 5) -> List[D
         if "items" not in data:
             return []
         
+        # Domínios problemáticos que costumam retornar HTML em vez de imagem
+        blocked_domains = [
+            'tiktok.com',
+            'tiktokcdn',
+            'jammable.com',
+            'facebook.com',
+            'fbsbx.com',
+            'instagram.com',
+            'cdninstagram.com'
+        ]
+        
         images = []
         for item in data["items"]:
+            image_url = item["link"]
+            
+            # Filtra URLs problemáticas
+            if any(domain in image_url.lower() for domain in blocked_domains):
+                continue
+            
+            # Filtra URLs sem extensão de imagem válida
+            if not any(ext in image_url.lower() for ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif']):
+                continue
+            
             images.append({
-                "url": item["link"],
+                "url": image_url,
                 "thumbnail": item.get("image", {}).get("thumbnailLink", ""),
                 "width": item.get("image", {}).get("width", 0),
                 "height": item.get("image", {}).get("height", 0),
                 "context": item.get("snippet", "")
             })
+            
+            # Para quando tiver imagens suficientes
+            if len(images) >= num_results:
+                break
         
         return images
     
