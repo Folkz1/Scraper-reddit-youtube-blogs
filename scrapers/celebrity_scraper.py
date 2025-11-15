@@ -102,7 +102,7 @@ Retorne APENAS um JSON válido (sem markdown, sem ```json):
         # Monta o payload para OpenRouter
         # Usando modelo pago (mais confiável)
         payload = {
-            "model": "google/gemini-2.0-flash-exp",
+            "model": "google/gemini-2.5-flash-lite",
             "messages": [
                 {
                     "role": "user",
