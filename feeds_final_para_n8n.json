@@ -1,0 +1,150 @@
+{
+  "feeds_validados_novos": [
+    {
+      "name": "News | Lifespan Research Institute (Life Extension)",
+      "url": "https://www.lifespan.io/news/category/life-extension-news/feed/",
+      "type": "rss",
+      "validation_score": 10,
+      "active": true,
+      "notes": "Feed específico da categoria Life Extension News"
+    },
+    {
+      "name": "FoodNavigator-USA.com",
+      "url": "https://www.foodnavigator-usa.com/arc/outboundfeeds/rss/",
+      "type": "rss",
+      "validation_score": 10,
+      "active": true,
+      "notes": "Novo feed - diferente do LatAm que já está no banco"
+    }
+  ],
+  "feeds_que_precisam_scraping_html": [
+    {
+      "name": "Nutrition UK News",
+      "site_url": "https://www.nutrition.org.uk/news",
+      "rss_url": null,
+      "method": "html_scraping",
+      "notes": "Site não tem RSS público - precisa scraping HTML"
+    },
+    {
+      "name": "MobiHealthNews South Korea",
+      "site_url": "https://www.mobihealthnews.com/tag/south-korea",
+      "rss_url": null,
+      "method": "html_scraping",
+      "notes": "Feed bloqueado (403) - precisa scraping HTML ou cookies"
+    },
+    {
+      "name": "Medical Korea Latest News",
+      "site_url": "https://www.medicalkorea.or.kr/en/latestnews",
+      "rss_url": null,
+      "method": "html_scraping",
+      "notes": "Site não tem RSS - precisa scraping HTML"
+    },
+    {
+      "name": "Blue Zones",
+      "site_url": "https://www.bluezones.com",
+      "rss_url": null,
+      "method": "html_scraping",
+      "notes": "Feed bloqueado (403) - precisa scraping HTML"
+    },
+    {
+      "name": "New Nutrition",
+      "site_url": "https://www.new-nutrition.com",
+      "rss_url": null,
+      "method": "html_scraping",
+      "notes": "Feed vazio - precisa scraping HTML"
+    }
+  ],
+  "feeds_ja_no_banco": [
+    {
+      "id": 1,
+      "name": "FitFeed",
+      "url": "https://fitfeed.com.br/feed"
+    },
+    {
+      "id": 3,
+      "name": "Saúde Abril",
+      "url": "https://saude.abril.com.br/feed"
+    },
+    {
+      "id": 4,
+      "name": "Tua Saúde",
+      "url": "https://www.tuasaude.com/feed/"
+    },
+    {
+      "id": 5,
+      "name": "Drauzio Varella",
+      "url": "https://drauziovarella.uol.com.br/feed/"
+    },
+    {
+      "id": 6,
+      "name": "Gorgonoid (YouTube)",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCLfCo17TCjx7qf-JMhQioLQ"
+    },
+    {
+      "id": 7,
+      "name": "Leandro Twin (YouTube)",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCPlemwX82_QEWRDC6yYnOCg"
+    },
+    {
+      "id": 8,
+      "name": "Renato Cariani (YouTube)",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCPX0gLduKAfgr-HJENa7CFw"
+    },
+    {
+      "id": 9,
+      "name": "Notícias Maromba (YouTube)",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCmK5h2-a4CquS4nIxDN6j7g"
+    },
+    {
+      "id": 10,
+      "name": "Fábrica de Monstros (YouTube)",
+      "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC9cz05xObaFpB8U72t73IFA"
+    },
+    {
+      "id": 11,
+      "name": "Reddit Bodyweight Fitness",
+      "url": "https://www.reddit.com/r/bodyweightfitness.rss"
+    },
+    {
+      "id": 12,
+      "name": "Reddit Eat Cheap and Healthy",
+      "url": "https://www.reddit.com/r/EatCheapAndHealthy.rss"
+    },
+    {
+      "id": 15,
+      "name": "WellWorthy",
+      "url": "https://wellworthy.com/feed/"
+    },
+    {
+      "id": 16,
+      "name": "China Daily Lifestyle",
+      "url": "http://www.chinadaily.com.cn/rss/lifestyle_rss.xml"
+    },
+    {
+      "id": 17,
+      "name": "Lifespan.io",
+      "url": "https://lifespan.io/feed"
+    },
+    {
+      "id": 18,
+      "name": "FoodNavigator LatAm",
+      "url": "https://www.foodnavigator-latam.com/rss"
+    },
+    {
+      "id": 19,
+      "name": "NutraIngredients",
+      "url": "https://www.nutraingredients.com/rss"
+    },
+    {
+      "id": 20,
+      "name": "Nutrition Insight",
+      "url": "https://www.nutritioninsight.com/rss"
+    }
+  ],
+  "resumo": {
+    "total_feeds_rss": 20,
+    "feeds_novos_validados": 2,
+    "feeds_que_precisam_scraping": 5,
+    "recomendacao": "Adicione os 2 feeds novos validados ao banco. Para os 5 sites sem RSS, use o endpoint /scrape-news com fallback HTML."
+  }
+}

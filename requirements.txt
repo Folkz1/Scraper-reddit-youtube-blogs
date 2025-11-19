@@ -9,3 +9,4 @@ yt-dlp==2024.11.4
 praw==7.7.1
 lxml==4.9.3
 Pillow==10.1.0
+feedparser==6.0.10

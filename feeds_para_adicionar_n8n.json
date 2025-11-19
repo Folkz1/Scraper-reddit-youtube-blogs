@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Lifespan.io Life Extension News",
+    "url": "https://www.lifespan.io/news/category/life-extension-news/feed/",
+    "type": "rss",
+    "validation_score": 10,
+    "active": true
+  },
+  {
+    "name": "FoodNavigator-USA.com",
+    "url": "https://www.foodnavigator-usa.com/arc/outboundfeeds/rss/",
+    "type": "rss",
+    "validation_score": 10,
+    "active": true
+  }
+]

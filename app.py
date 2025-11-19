@@ -14,6 +14,7 @@ from scrapers.youtube_scraper import scrape_youtube, extract_video_id
 from scrapers.reddit_scraper import scrape_reddit
 from scrapers.celebrity_scraper import scrape_celebrity_image
 from scrapers.youtube_data_api import get_video_metadata, get_channel_info
+from scrapers.news_scraper import scrape_news
 
 app = FastAPI(
     title="Scraper API",
@@ -51,6 +52,17 @@ class CelebrityImageResponse(BaseModel):
     data: dict
     error: Optional[str] = None
 
+class NewsRequest(BaseModel):
+    url: str
+    existing_links: Optional[list[str]] = []
+    hours_window: Optional[int] = 24
+    max_summary_length: Optional[int] = 500
+
+class NewsResponse(BaseModel):
+    success: bool
+    data: dict
+    error: Optional[str] = None
+
 class YouTubeMetadataRequest(BaseModel):
     url: str
 
@@ -79,6 +91,7 @@ async def root():
             "/scrape": "POST - Scrape de URLs (artigos, YouTube, Reddit)",
             "/youtube/metadata": "POST - Metadados de vídeos do YouTube (views, likes, etc)",
             "/celebrity-image": "POST - Busca e processa imagem de celebridade",
+            "/scrape-news": "POST - Scrape de notícias (RSS + fallback HTML)",
             "/health": "GET - Health check"
         }
     }
@@ -198,6 +211,50 @@ async def get_celebrity_image(request: CelebrityImageRequest):
     
     except Exception as e:
         return CelebrityImageResponse(
+            success=False,
+            data={},
+            error=str(e)
+        )
+
+@app.post("/scrape-news", response_model=NewsResponse)
+async def get_news(request: NewsRequest):
+    """
+    Scrape de notícias com RSS + fallback HTML
+    
+    - Tenta ler RSS feed primeiro (alta confiabilidade)
+    - Se falhar, faz scraping do HTML do blog
+    - Filtra por janela de tempo (padrão 24h)
+    - Remove duplicatas baseado em links existentes
+    - Retorna lista normalizada
+    
+    Parâmetros:
+    - url: URL do RSS feed ou blog
+    - existing_links: Lista de URLs já processadas (opcional)
+    - hours_window: Janela de tempo em horas (padrão 24h)
+    - max_summary_length: Tamanho máximo do resumo (padrão 500)
+    
+    Retorna:
+    - news_list: Lista de notícias com title, url, summary, pubDate, source
+    - total_found: Total de notícias encontradas
+    - total_unique: Total após remover duplicatas
+    - source_type: 'rss' ou 'html_scraping'
+    """
+    try:
+        data = await scrape_news(
+            url=request.url,
+            existing_links=request.existing_links,
+            hours_window=request.hours_window,
+            max_summary_length=request.max_summary_length
+        )
+        
+        return NewsResponse(
+            success=True,
+            data=data,
+            error=None
+        )
+    
+    except Exception as e:
+        return NewsResponse(
             success=False,
             data={},
             error=str(e)
