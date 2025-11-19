@@ -91,9 +91,9 @@ GOOGLE_SEARCH_ENGINE_ID=seu_search_engine_id_aqui
 
 ### 2. OpenRouter API
 
-Já configurado! Usando sua key:
+Configure no arquivo `.env`:
 ```bash
-OPENROUTER_API_KEY=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
+OPENROUTER_API_KEY=sua_chave_aqui
 ```
 
 ## 💰 Custos

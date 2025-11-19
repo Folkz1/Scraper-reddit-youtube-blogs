@@ -11,7 +11,9 @@ GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 GOOGLE_SEARCH_ENGINE_ID = os.getenv('GOOGLE_SEARCH_ENGINE_ID')
 
 # OpenRouter API
-OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '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')
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+if not OPENROUTER_API_KEY:
+    raise ValueError("OPENROUTER_API_KEY não configurada no .env")
 
 # Mapeamento de apelidos/nomes artísticos para nomes reais
 CELEBRITY_NAME_MAPPING = {
@@ -96,8 +98,8 @@ def generate_search_queries(celebrity_name: str) -> List[str]:
     normalized_name = normalize_celebrity_name(celebrity_name)
     
     queries = [
-        # Query 1: Nome + maromba (contexto brasileiro)
-        f"{normalized_name} maromba bodybuilder photo",
+        # Query 1: Nome + bodybuilder
+        f"{normalized_name} bodybuilder photo",
         # Query 2: Nome + portrait profissional
         f"{normalized_name} portrait professional photo",
         # Query 3: Nome + fitness
