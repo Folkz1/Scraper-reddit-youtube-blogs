@@ -361,21 +361,25 @@ async def validate_source(request: AddSourceRequest):
             best_feed = discovery_result["rss_found"][0]
             rss_url = best_feed["url"]
             
-            # Testa scraping
-            news_result = await scrape_news(rss_url, hours_window=168)  # 7 dias
+            # Define score baseado no tipo (mesmo sem testar scraping)
+            if validation_data["source_type"] == "reddit":
+                validation_data["validation_score"] = 9  # Reddit RSS é confiável
+            elif validation_data["source_type"] == "youtube":
+                validation_data["validation_score"] = 10  # YouTube RSS é perfeito
+            else:
+                validation_data["validation_score"] = 10  # Blog RSS é perfeito
             
-            if news_result["news_list"]:
-                # Score baseado no tipo
-                if validation_data["source_type"] == "reddit":
-                    validation_data["validation_score"] = 9  # Reddit RSS é confiável
-                elif validation_data["source_type"] == "youtube":
-                    validation_data["validation_score"] = 10  # YouTube RSS é perfeito
-                else:
-                    validation_data["validation_score"] = 10  # Blog RSS é perfeito
-                
-                validation_data["sample_news"] = news_result["news_list"][:3]
-                validation_data["recommended_url"] = rss_url
-                validation_data["recommended_name"] = best_feed.get("title", request.name or "")
+            validation_data["recommended_url"] = rss_url
+            validation_data["recommended_name"] = best_feed.get("title", request.name or "")
+            
+            # Tenta buscar exemplos (mas não falha se não encontrar)
+            try:
+                news_result = await scrape_news(rss_url, hours_window=168)  # 7 dias
+                if news_result["news_list"]:
+                    validation_data["sample_news"] = news_result["news_list"][:3]
+            except Exception as e:
+                print(f"Erro ao buscar exemplos: {e}")
+                # Mantém score mesmo sem exemplos
         
         # Se não encontrou RSS, testa HTML scraping (apenas para blogs)
         elif validation_data["source_type"] == "blog":
