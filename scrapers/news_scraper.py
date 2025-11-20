@@ -149,23 +149,36 @@ def extract_from_blog_html(url: str, hours_window: int = 24) -> List[Dict]:
         # Estratégia 2: Se não achar articles, procura por divs com classes comuns
         if not articles:
             articles = soup.find_all(['div'], class_=re.compile(
-                r'post|article|entry|blog-post|news-item|card',
+                r'post|article|entry|blog-post|news-item|card|item|box',
                 re.IGNORECASE
             ))
         
+        # Estratégia 3: Procura por links em listas (ul/ol)
+        if not articles or len(articles) < 3:
+            list_items = soup.find_all(['li'], class_=re.compile(
+                r'post|article|entry|item',
+                re.IGNORECASE
+            ))
+            if list_items:
+                articles.extend(list_items)
+        
         for article in articles[:20]:  # Limita a 20 posts
             try:
-                # Extrai título
+                # Extrai título (múltiplas estratégias)
                 title_tag = (
-                    article.find(['h1', 'h2', 'h3'], class_=re.compile(r'title|heading|headline', re.IGNORECASE)) or
-                    article.find(['h1', 'h2', 'h3']) or
-                    article.find('a', class_=re.compile(r'title', re.IGNORECASE))
+                    article.find(['h1', 'h2', 'h3', 'h4'], class_=re.compile(r'title|heading|headline|name', re.IGNORECASE)) or
+                    article.find(['h1', 'h2', 'h3', 'h4']) or
+                    article.find('a', class_=re.compile(r'title|link', re.IGNORECASE))
                 )
                 
                 if not title_tag:
                     continue
                 
                 title = title_tag.get_text(strip=True)
+                
+                # Pula se título muito curto (provavelmente não é artigo)
+                if len(title) < 10:
+                    continue
                 
                 # Extrai link
                 link_tag = title_tag.find('a') if title_tag.name != 'a' else title_tag

@@ -86,6 +86,24 @@ function displayValidationResult(data) {
         </div>
     `;
     
+    // Mostra tipo de fonte
+    let sourceTypeIcon = '🌐';
+    let sourceTypeName = 'Blog';
+    
+    if (data.source_type === 'reddit') {
+        sourceTypeIcon = '📱';
+        sourceTypeName = 'Reddit';
+    } else if (data.source_type === 'youtube') {
+        sourceTypeIcon = '📺';
+        sourceTypeName = 'YouTube';
+    }
+    
+    html += `
+        <div style="margin-bottom: 1rem;">
+            <strong>Tipo de Fonte:</strong> ${sourceTypeIcon} ${sourceTypeName}
+        </div>
+    `;
+    
     if (data.rss_found && data.rss_found.length > 0) {
         html += `
             <div style="margin-bottom: 1rem;">

@@ -328,6 +328,7 @@ async def validate_source(request: AddSourceRequest):
     Valida uma fonte RSS/HTML antes de adicionar
     
     - Descobre RSS feed automaticamente
+    - Suporta: Blogs, Reddit, YouTube
     - Testa scraping HTML como fallback
     - Retorna score de validação (0-10)
     - NÃO salva no banco (apenas valida)
@@ -345,8 +346,15 @@ async def validate_source(request: AddSourceRequest):
             "status": discovery_result.get("status"),
             "validation_score": 0,
             "can_scrape_html": False,
-            "sample_news": []
+            "sample_news": [],
+            "source_type": "blog"  # blog, reddit, youtube
         }
+        
+        # Detecta tipo de fonte
+        if 'reddit.com/r/' in request.url.lower():
+            validation_data["source_type"] = "reddit"
+        elif 'youtube.com' in request.url.lower() or 'youtu.be' in request.url.lower():
+            validation_data["source_type"] = "youtube"
         
         # Se encontrou RSS, testa
         if discovery_result["rss_found"]:
@@ -357,13 +365,20 @@ async def validate_source(request: AddSourceRequest):
             news_result = await scrape_news(rss_url, hours_window=168)  # 7 dias
             
             if news_result["news_list"]:
-                validation_data["validation_score"] = 10
+                # Score baseado no tipo
+                if validation_data["source_type"] == "reddit":
+                    validation_data["validation_score"] = 9  # Reddit RSS é confiável
+                elif validation_data["source_type"] == "youtube":
+                    validation_data["validation_score"] = 10  # YouTube RSS é perfeito
+                else:
+                    validation_data["validation_score"] = 10  # Blog RSS é perfeito
+                
                 validation_data["sample_news"] = news_result["news_list"][:3]
                 validation_data["recommended_url"] = rss_url
                 validation_data["recommended_name"] = best_feed.get("title", request.name or "")
         
-        # Se não encontrou RSS, testa HTML scraping
-        else:
+        # Se não encontrou RSS, testa HTML scraping (apenas para blogs)
+        elif validation_data["source_type"] == "blog":
             news_result = await scrape_news(request.url, hours_window=168)
             
             if news_result["news_list"]:

@@ -18,14 +18,19 @@
             <h2>➕ Adicionar Nova Fonte</h2>
             <form id="addSourceForm">
                 <div class="form-group">
-                    <label for="sourceUrl">URL do Site ou RSS Feed</label>
+                    <label for="sourceUrl">URL do Site, Reddit ou YouTube</label>
                     <input 
-                        type="url" 
+                        type="text" 
                         id="sourceUrl" 
-                        placeholder="https://exemplo.com.br ou https://exemplo.com.br/feed"
+                        placeholder="https://exemplo.com.br ou https://reddit.com/r/Maromba ou Gorgonoid"
                         required
                     >
-                    <small>Cole a URL do site. O sistema vai descobrir o RSS automaticamente!</small>
+                    <small>
+                        Suporta: 
+                        🌐 Blogs (https://fitfeed.com.br) • 
+                        📱 Reddit (https://reddit.com/r/Maromba) • 
+                        📺 YouTube (Gorgonoid ou URL do canal)
+                    </small>
                 </div>
 
                 <div class="form-group">

@@ -1,5 +1,6 @@
 """
 Script para descobrir e validar RSS feeds de sites
+Suporta: Blogs, Reddit, YouTube
 """
 
 import requests
@@ -8,6 +9,7 @@ import feedparser
 import json
 from urllib.parse import urljoin, urlparse
 import urllib3
+import re
 
 # Desabilita warnings de SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -27,9 +29,112 @@ SITES_TO_TEST = [
     "https://www.nutritioninsight.com/news.html"
 ]
 
+def detect_url_type(url):
+    """Detecta o tipo de URL (reddit, youtube, blog)"""
+    url_lower = url.lower()
+    
+    if 'reddit.com/r/' in url_lower:
+        return 'reddit'
+    elif 'youtube.com' in url_lower or 'youtu.be' in url_lower:
+        return 'youtube'
+    else:
+        return 'blog'
+
+def get_reddit_rss(url):
+    """
+    Converte URL do Reddit em RSS feed
+    Exemplos:
+    - https://www.reddit.com/r/Maromba/ -> https://www.reddit.com/r/Maromba/.rss
+    - https://reddit.com/r/fitness -> https://reddit.com/r/fitness/.rss
+    """
+    # Remove trailing slash se existir
+    url = url.rstrip('/')
+    
+    # Adiciona .rss no final
+    rss_url = f"{url}/.rss"
+    
+    # Extrai nome do subreddit
+    match = re.search(r'/r/([^/]+)', url)
+    subreddit_name = match.group(1) if match else 'Unknown'
+    
+    return {
+        "url": rss_url,
+        "title": f"r/{subreddit_name}",
+        "type": "reddit"
+    }
+
+def get_youtube_rss(url):
+    """
+    Converte URL/nome do YouTube em RSS feed
+    Suporta:
+    - URL do canal: https://www.youtube.com/@Gorgonoid
+    - Nome do canal: Gorgonoid
+    - Channel ID: UCLfCo17TCjx7qf-JMhQioLQ
+    """
+    # Se for apenas um nome (sem http), busca o channel ID
+    if not url.startswith('http'):
+        # Assume que é nome do canal
+        channel_name = url.strip()
+        # Tenta buscar o canal
+        search_url = f"https://www.youtube.com/results?search_query={channel_name}"
+        try:
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            response = requests.get(search_url, headers=headers, timeout=10)
+            
+            # Procura por channel ID no HTML
+            match = re.search(r'"channelId":"([^"]+)"', response.text)
+            if match:
+                channel_id = match.group(1)
+                rss_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+                return {
+                    "url": rss_url,
+                    "title": channel_name,
+                    "type": "youtube"
+                }
+        except:
+            pass
+        
+        return None
+    
+    # Se for URL, extrai channel ID ou username
+    if '/@' in url:
+        # Formato: https://www.youtube.com/@Gorgonoid
+        username = url.split('/@')[1].split('/')[0].split('?')[0]
+        
+        # Busca o channel ID
+        try:
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            response = requests.get(url, headers=headers, timeout=10)
+            
+            # Procura por channel ID no HTML
+            match = re.search(r'"channelId":"([^"]+)"', response.text)
+            if match:
+                channel_id = match.group(1)
+                rss_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+                return {
+                    "url": rss_url,
+                    "title": username,
+                    "type": "youtube"
+                }
+        except:
+            pass
+    
+    elif 'channel/' in url:
+        # Formato: https://www.youtube.com/channel/UCLfCo17TCjx7qf-JMhQioLQ
+        channel_id = url.split('channel/')[1].split('/')[0].split('?')[0]
+        rss_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+        return {
+            "url": rss_url,
+            "title": f"Channel {channel_id[:10]}...",
+            "type": "youtube"
+        }
+    
+    return None
+
 def discover_rss_feed(url):
     """
     Tenta descobrir o RSS feed de um site
+    Suporta: Blogs, Reddit, YouTube
     """
     print(f"\n🔍 Testando: {url}")
     
@@ -41,6 +146,49 @@ def discover_rss_feed(url):
     }
     
     try:
+        # Detecta tipo de URL
+        url_type = detect_url_type(url)
+        
+        # Reddit
+        if url_type == 'reddit':
+            print(f"  📱 Detectado: Reddit")
+            reddit_feed = get_reddit_rss(url)
+            
+            # Valida o feed
+            feed = feedparser.parse(reddit_feed["url"])
+            if feed.entries:
+                results["rss_found"].append({
+                    "url": reddit_feed["url"],
+                    "entries_count": len(feed.entries),
+                    "title": reddit_feed["title"]
+                })
+                results["status"] = "found"
+                results["method"] = "reddit_rss"
+                print(f"  ✅ RSS Reddit: {reddit_feed['url']} ({len(feed.entries)} posts)")
+                return results
+        
+        # YouTube
+        elif url_type == 'youtube':
+            print(f"  📺 Detectado: YouTube")
+            youtube_feed = get_youtube_rss(url)
+            
+            if youtube_feed:
+                # Valida o feed
+                feed = feedparser.parse(youtube_feed["url"])
+                if feed.entries:
+                    results["rss_found"].append({
+                        "url": youtube_feed["url"],
+                        "entries_count": len(feed.entries),
+                        "title": youtube_feed["title"]
+                    })
+                    results["status"] = "found"
+                    results["method"] = "youtube_rss"
+                    print(f"  ✅ RSS YouTube: {youtube_feed['url']} ({len(feed.entries)} vídeos)")
+                    return results
+        
+        # Blog (comportamento original)
+        print(f"  🌐 Detectado: Blog/Site")
+        
         # Tenta variações comuns de RSS
         common_rss_paths = [
             "/feed",
@@ -51,7 +199,13 @@ def discover_rss_feed(url):
             "/rss.xml",
             "/atom.xml",
             "/index.xml",
-            "/feeds/posts/default"  # Blogger
+            "/feeds/posts/default",  # Blogger
+            "/blog/feed",
+            "/blog/rss",
+            "/wp-rss2.php",  # WordPress antigo
+            "/wp-feed.php",  # WordPress antigo
+            "/?feed=rss2",  # WordPress
+            "/?feed=atom",  # WordPress
         ]
         
         base_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
@@ -60,7 +214,8 @@ def discover_rss_feed(url):
         for path in common_rss_paths:
             test_url = base_url + path
             try:
-                response = requests.get(test_url, timeout=5, allow_redirects=True, verify=False)
+                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+                response = requests.get(test_url, timeout=5, allow_redirects=True, verify=False, headers=headers)
                 if response.status_code == 200:
                     # Valida se é realmente um feed
                     feed = feedparser.parse(response.content)
