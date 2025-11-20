@@ -1,10 +1,14 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, HttpUrl
 from typing import Optional, Literal
 import uvicorn
 import os
 from dotenv import load_dotenv
+import asyncpg
+from datetime import datetime
 
 # Carrega variáveis de ambiente
 load_dotenv()
@@ -15,6 +19,9 @@ from scrapers.reddit_scraper import scrape_reddit
 from scrapers.celebrity_scraper import scrape_celebrity_image
 from scrapers.youtube_data_api import get_video_metadata, get_channel_info
 from scrapers.news_scraper import scrape_news
+
+# Database connection
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgres://postgres:99d74b03160029761260@72.61.32.25:5432/postgres?sslmode=disable')
 
 app = FastAPI(
     title="Scraper API",
@@ -30,6 +37,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Database helper
+async def get_db_connection():
+    """Cria conexão com PostgreSQL"""
+    return await asyncpg.connect(DATABASE_URL)
 
 class ScrapeRequest(BaseModel):
     url: str
@@ -70,6 +85,21 @@ class YouTubeMetadataResponse(BaseModel):
     success: bool
     data: dict
     error: Optional[str] = None
+
+class AddSourceRequest(BaseModel):
+    url: str
+    name: Optional[str] = None
+    type: Optional[str] = "rss"
+
+class AddSourceResponse(BaseModel):
+    success: bool
+    data: Optional[dict] = None
+    error: Optional[str] = None
+
+class SourceListResponse(BaseModel):
+    success: bool
+    sources: list
+    total: int
 
 def detect_url_type(url: str) -> str:
     """Detecta automaticamente o tipo de URL"""
@@ -259,6 +289,218 @@ async def get_news(request: NewsRequest):
             data={},
             error=str(e)
         )
+
+@app.get("/feed-manager", response_class=HTMLResponse)
+async def feed_manager_page():
+    """Página web para gerenciar feeds RSS"""
+    with open("static/index.html", "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.get("/api/sources", response_model=SourceListResponse)
+async def list_sources():
+    """Lista todas as fontes RSS cadastradas"""
+    try:
+        conn = await get_db_connection()
+        try:
+            rows = await conn.fetch("""
+                SELECT id, name, url, type, active, validation_score, 
+                       validated_at, created_at
+                FROM approved_sources
+                ORDER BY created_at DESC
+            """)
+            
+            sources = [dict(row) for row in rows]
+            
+            return SourceListResponse(
+                success=True,
+                sources=sources,
+                total=len(sources)
+            )
+        finally:
+            await conn.close()
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/sources/validate", response_model=AddSourceResponse)
+async def validate_source(request: AddSourceRequest):
+    """
+    Valida uma fonte RSS/HTML antes de adicionar
+    
+    - Descobre RSS feed automaticamente
+    - Testa scraping HTML como fallback
+    - Retorna score de validação (0-10)
+    - NÃO salva no banco (apenas valida)
+    """
+    try:
+        from discover_rss_feeds import discover_rss_feed
+        
+        # Tenta descobrir RSS
+        discovery_result = discover_rss_feed(request.url)
+        
+        validation_data = {
+            "url": request.url,
+            "rss_found": discovery_result.get("rss_found", []),
+            "method": discovery_result.get("method"),
+            "status": discovery_result.get("status"),
+            "validation_score": 0,
+            "can_scrape_html": False,
+            "sample_news": []
+        }
+        
+        # Se encontrou RSS, testa
+        if discovery_result["rss_found"]:
+            best_feed = discovery_result["rss_found"][0]
+            rss_url = best_feed["url"]
+            
+            # Testa scraping
+            news_result = await scrape_news(rss_url, hours_window=168)  # 7 dias
+            
+            if news_result["news_list"]:
+                validation_data["validation_score"] = 10
+                validation_data["sample_news"] = news_result["news_list"][:3]
+                validation_data["recommended_url"] = rss_url
+                validation_data["recommended_name"] = best_feed.get("title", request.name or "")
+        
+        # Se não encontrou RSS, testa HTML scraping
+        else:
+            news_result = await scrape_news(request.url, hours_window=168)
+            
+            if news_result["news_list"]:
+                validation_data["validation_score"] = 7  # Score menor para HTML
+                validation_data["can_scrape_html"] = True
+                validation_data["sample_news"] = news_result["news_list"][:3]
+                validation_data["recommended_url"] = request.url
+                validation_data["recommended_name"] = request.name or ""
+        
+        return AddSourceResponse(
+            success=True,
+            data=validation_data
+        )
+    
+    except Exception as e:
+        return AddSourceResponse(
+            success=False,
+            error=str(e)
+        )
+
+@app.post("/api/sources/add", response_model=AddSourceResponse)
+async def add_source(request: AddSourceRequest):
+    """
+    Adiciona uma nova fonte RSS ao banco de dados
+    
+    - Valida antes de adicionar
+    - Salva em approved_sources
+    - Retorna dados da fonte criada
+    """
+    try:
+        # Valida primeiro
+        validation = await validate_source(request)
+        
+        if not validation.success or validation.data["validation_score"] == 0:
+            return AddSourceResponse(
+                success=False,
+                error="Fonte não passou na validação. Não foi possível extrair notícias."
+            )
+        
+        # Prepara dados
+        url_to_save = validation.data.get("recommended_url", request.url)
+        name_to_save = validation.data.get("recommended_name", request.name or "")
+        type_to_save = "rss" if validation.data["rss_found"] else "html"
+        score = validation.data["validation_score"]
+        
+        # Salva no banco
+        conn = await get_db_connection()
+        try:
+            # Verifica se já existe
+            existing = await conn.fetchrow(
+                "SELECT id FROM approved_sources WHERE url = $1",
+                url_to_save
+            )
+            
+            if existing:
+                return AddSourceResponse(
+                    success=False,
+                    error="Esta fonte já está cadastrada."
+                )
+            
+            # Insere
+            row = await conn.fetchrow("""
+                INSERT INTO approved_sources 
+                (url, name, type, validation_score, validated_at, active, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING id, url, name, type, validation_score, validated_at, active, created_at
+            """, url_to_save, name_to_save, type_to_save, score, 
+                datetime.now(), True, datetime.now())
+            
+            return AddSourceResponse(
+                success=True,
+                data={
+                    "source": dict(row),
+                    "validation": validation.data
+                }
+            )
+        
+        finally:
+            await conn.close()
+    
+    except Exception as e:
+        return AddSourceResponse(
+            success=False,
+            error=str(e)
+        )
+
+@app.delete("/api/sources/{source_id}")
+async def delete_source(source_id: int):
+    """Deleta uma fonte RSS"""
+    try:
+        conn = await get_db_connection()
+        try:
+            result = await conn.execute(
+                "DELETE FROM approved_sources WHERE id = $1",
+                source_id
+            )
+            
+            if result == "DELETE 0":
+                raise HTTPException(status_code=404, detail="Fonte não encontrada")
+            
+            return {"success": True, "message": "Fonte deletada com sucesso"}
+        
+        finally:
+            await conn.close()
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.patch("/api/sources/{source_id}/toggle")
+async def toggle_source(source_id: int):
+    """Ativa/desativa uma fonte RSS"""
+    try:
+        conn = await get_db_connection()
+        try:
+            row = await conn.fetchrow(
+                "UPDATE approved_sources SET active = NOT active WHERE id = $1 RETURNING active",
+                source_id
+            )
+            
+            if not row:
+                raise HTTPException(status_code=404, detail="Fonte não encontrada")
+            
+            return {
+                "success": True,
+                "active": row["active"],
+                "message": f"Fonte {'ativada' if row['active'] else 'desativada'} com sucesso"
+            }
+        
+        finally:
+            await conn.close()
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8001)

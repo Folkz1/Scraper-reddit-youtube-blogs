@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Feeds RSS - NutrIA</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗞️ Gerenciador de Feeds RSS</h1>
+            <p>Adicione e gerencie fontes de notícias automaticamente</p>
+        </header>
+
+        <!-- Formulário de Adição -->
+        <section class="add-section">
+            <h2>➕ Adicionar Nova Fonte</h2>
+            <form id="addSourceForm">
+                <div class="form-group">
+                    <label for="sourceUrl">URL do Site ou RSS Feed</label>
+                    <input 
+                        type="url" 
+                        id="sourceUrl" 
+                        placeholder="https://exemplo.com.br ou https://exemplo.com.br/feed"
+                        required
+                    >
+                    <small>Cole a URL do site. O sistema vai descobrir o RSS automaticamente!</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="sourceName">Nome da Fonte (opcional)</label>
+                    <input 
+                        type="text" 
+                        id="sourceName" 
+                        placeholder="Ex: Blog de Nutrição"
+                    >
+                    <small>Se deixar vazio, será detectado automaticamente</small>
+                </div>
+
+                <div class="button-group">
+                    <button type="button" id="validateBtn" class="btn btn-secondary">
+                        🔍 Validar Fonte
+                    </button>
+                    <button type="submit" id="addBtn" class="btn btn-primary" disabled>
+                        ✅ Adicionar ao Banco
+                    </button>
+                </div>
+            </form>
+
+            <!-- Resultado da Validação -->
+            <div id="validationResult" class="validation-result" style="display: none;">
+                <h3>Resultado da Validação</h3>
+                <div id="validationContent"></div>
+            </div>
+        </section>
+
+        <!-- Lista de Fontes -->
+        <section class="sources-section">
+            <div class="section-header">
+                <h2>📚 Fontes Cadastradas</h2>
+                <button id="refreshBtn" class="btn btn-small">🔄 Atualizar</button>
+            </div>
+
+            <div id="loadingSpinner" class="loading">
+                <div class="spinner"></div>
+                <p>Carregando fontes...</p>
+            </div>
+
+            <div id="sourcesContainer"></div>
+        </section>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
